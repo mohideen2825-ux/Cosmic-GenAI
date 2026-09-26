@@ -78,20 +78,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Loading Steps Sequence
-  const loadingSteps = [
-    { text: "Summoning Gemini Flash for 5-panel outline...", progress: 20, time: 0 },
-    { text: "Expanding narration & character dialogue with Gemini Pro...", progress: 45, time: 2500 },
-    { text: "Generating comic illustrations with Stable Diffusion...", progress: 75, time: 5500 },
-    { text: "Composing comic layout & compiling high-res PDF...", progress: 92, time: 8500 },
-    { text: "Almost ready! Finalizing your comic masterpiece...", progress: 98, time: 11000 }
-  ];
-
   function startLoadingAnimation() {
     if (!loadingOverlay) return;
     loadingOverlay.style.display = "flex";
 
-    loadingSteps.forEach((step) => {
+    const selectedPanelRadio = document.querySelector('input[name="panel_count"]:checked');
+    const panelCount = selectedPanelRadio ? selectedPanelRadio.value : "5";
+
+    const dynamicSteps = [
+      { text: `Summoning Gemini Flash for ${panelCount}-panel outline...`, progress: 18, time: 0 },
+      { text: `Expanding narration & character dialogue with Gemini Pro...`, progress: 38, time: 2500 },
+      { text: `Generating ${panelCount} comic illustrations with FLUX / Stable Diffusion...`, progress: 68, time: 5500 },
+      { text: `Composing comic layout & compiling high-res PDF...`, progress: 90, time: 9500 },
+      { text: `Almost ready! Finalizing your ${panelCount}-panel comic book...`, progress: 98, time: 13000 }
+    ];
+
+    dynamicSteps.forEach((step) => {
       setTimeout(() => {
         if (loadingPhaseText) loadingPhaseText.textContent = step.text;
         if (progressBarFill) progressBarFill.style.width = `${step.progress}%`;

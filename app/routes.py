@@ -33,6 +33,8 @@ class PromptRequest(BaseModel):
     setting: str = Field(..., min_length=2, max_length=150, description="Environment or backdrop of the comic")
     tone: str = Field(..., min_length=2, max_length=50, description="Emotional or narrative tone")
     art_style: str = Field(..., min_length=2, max_length=50, description="Visual illustration style")
+    panel_count: int = Field(5, ge=1, le=10, description="Number of panels to generate (default 5)")
+    custom_panel_notes: Optional[str] = Field(None, description="Optional custom scene beats or notes per panel")
 
 
 def _is_api_key_configured() -> bool:
@@ -92,12 +94,14 @@ async def generate_comic_form(
     setting: str = Form(...),
     custom_setting: Optional[str] = Form(None),
     tone: str = Form("Adventure"),
-    art_style: str = Form("Comic Book")
+    art_style: str = Form("Comic Book"),
+    panel_count: int = Form(5),
+    custom_panel_notes: Optional[str] = Form(None)
 ):
     """
     Primary comic generation form endpoint.
     Executes the complete generation workflow:
-    Input Validation -> generate_outline() -> generate_story() -> generate_image() x5 -> build_comic_layout() -> save_pdf() -> Render Preview.
+    Input Validation -> generate_outline() -> generate_story() -> generate_image() -> build_comic_layout() -> save_pdf() -> Render Preview.
     """
     # 1. Validation & Input Sanitization
     story_prompt = story_prompt.strip()
@@ -120,15 +124,17 @@ async def generate_comic_form(
         final_setting = "Mysterious Realm"
 
     try:
-        logger.info(f"Initiating comic generation: character='{character_name}', setting='{final_setting}', tone='{tone}', style='{art_style}'")
+        logger.info(f"Initiating comic generation: character='{character_name}', setting='{final_setting}', tone='{tone}', style='{art_style}', panels={panel_count}")
 
-        # 2. Gemini Flash - 5-Panel Outline
+        # 2. Gemini Flash - Outline Generation
         outline = generate_outline(
             story_prompt=story_prompt,
             character_name=character_name,
             setting=final_setting,
             tone=tone,
-            art_style=art_style
+            art_style=art_style,
+            panel_count=panel_count,
+            custom_panel_notes=custom_panel_notes
         )
 
         # 3. Gemini Pro - Story & Dialogue Expansion
@@ -215,7 +221,9 @@ async def generate_comic_json(req: PromptRequest):
             character_name=req.character_name,
             setting=req.setting,
             tone=req.tone,
-            art_style=req.art_style
+            art_style=req.art_style,
+            panel_count=req.panel_count,
+            custom_panel_notes=req.custom_panel_notes
         )
 
         story_panels = generate_story(

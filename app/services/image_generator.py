@@ -199,33 +199,44 @@ def _render_stylized_comic_art(
 
 
 def _generate_via_hf_api(prompt: str, output_path: Path, hf_token: str) -> bool:
-    """Attempt image generation using Hugging Face Inference API."""
-    import requests
-
-    headers = {"Authorization": f"Bearer {hf_token}"}
-    api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
-
+    """Attempt image generation using Hugging Face InferenceClient / API."""
     try:
-        logger.info("Calling Hugging Face Inference API for image generation...")
-        payload = {
-            "inputs": prompt,
-            "parameters": {
-                "negative_prompt": "blurry, deformed, bad anatomy, duplicate, low quality, watermark, signature, extra limbs",
-                "num_inference_steps": 25
-            }
-        }
-        response = requests.post(api_url, headers=headers, json=payload, timeout=45)
+        from huggingface_hub import InferenceClient
 
-        if response.status_code == 200 and "image" in response.headers.get("content-type", ""):
-            with open(output_path, "wb") as f:
-                f.write(response.content)
-            logger.info(f"Successfully generated image via HF API: {output_path.name}")
+        logger.info("Calling Hugging Face InferenceClient for Stable Diffusion generation...")
+        client = InferenceClient(token=hf_token, timeout=60)
+        
+        # Candidate text-to-image models in order of priority
+        candidate_models = [
+            "black-forest-labs/FLUX.1-schnell",
+            "ByteDance/SDXL-Lightning",
+            "stabilityai/sd-turbo",
+            "stabilityai/stable-diffusion-xl-base-1.0",
+            "runwayml/stable-diffusion-v1-5"
+        ]
+        
+        image = None
+        for model_id in candidate_models:
+            try:
+                image = client.text_to_image(
+                    prompt=prompt,
+                    model=model_id
+                )
+                if image:
+                    logger.info(f"Successfully generated image with HF model: {model_id}")
+                    break
+            except Exception as e_m:
+                logger.warning(f"HF model {model_id} attempt returned: {e_m}")
+                continue
+
+        if image:
+            image.save(str(output_path))
+            logger.info(f"Saved HF generated image: {output_path.name}")
             return True
-        else:
-            logger.warning(f"HF API returned status {response.status_code}: {response.text[:200]}")
-            return False
+
+        return False
     except Exception as exc:
-        logger.warning(f"Hugging Face API call failed: {exc}")
+        logger.warning(f"Hugging Face InferenceClient failed: {exc}")
         return False
 
 
@@ -286,10 +297,13 @@ def generate_image(
     filename = f"panel_{safe_uid}_{panel_num}.png"
     output_path = PANELS_DIR / filename
 
+    # Style reinforcement for image generators
+    styled_prompt = f"{art_style} comic style illustration, {prompt}, vibrant, high quality, highly detailed"
+
     # 1. Hugging Face API check
     hf_token = os.getenv("HF_API_KEY", "").strip()
     if hf_token and hf_token != "your_huggingface_api_key":
-        if _generate_via_hf_api(prompt, output_path, hf_token):
+        if _generate_via_hf_api(styled_prompt, output_path, hf_token):
             return f"/static/panels/{filename}"
 
     # 2. Local Diffusers check

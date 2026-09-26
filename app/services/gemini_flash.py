@@ -31,49 +31,50 @@ def _generate_dev_fallback_outline(
     character_name: str,
     setting: str,
     tone: str,
-    art_style: str
+    art_style: str,
+    panel_count: int = 5,
+    custom_panel_notes: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Intelligent development fallback generator when Gemini API key is not configured.
-    Provides a dynamic, coherent 5-panel story structure tailored to user inputs.
+    Provides a dynamic, coherent comic structure tailored to user inputs and panel count.
     """
-    logger.info("Using development fallback for 5-panel comic outline.")
+    logger.info(f"Using development fallback for {panel_count}-panel comic outline.")
 
     # Character appearance signature for consistency across panels
     char_desc = f"{character_name}, expressive face, distinct signature outfit suitable for {setting}"
 
-    return [
-        {
-            "panel": 1,
-            "title": f"Arrival in {setting}",
-            "scene_description": f"Establishing shot of {setting}. {character_name} stands at the threshold, taking in the breathtaking surroundings. The mood is distinctly {tone.lower()}.",
-            "image_prompt": f"A vibrant wide shot of {setting}, {char_desc}, looking out with determination, {art_style} art style, dramatic lighting, rich textures, comic book illustration, dynamic perspective, sharp details, masterwork."
-        },
-        {
-            "panel": 2,
-            "title": "The Inciting Spark",
-            "scene_description": f"{character_name} discovers an unusual anomaly or challenge in {setting}. A mysterious glow or strange event related to '{story_prompt[:60]}...' triggers urgent action.",
-            "image_prompt": f"Medium shot, {char_desc} discovering a mysterious glowing artifact in {setting}, surprise and curiosity on their face, {art_style} comic illustration, vibrant colors, expressive shading, cinematic atmosphere."
-        },
-        {
-            "panel": 3,
-            "title": "The Rising Conflict",
-            "scene_description": f"The situation intensifies. {character_name} faces an unexpected obstacle or confrontation in {setting}, testing their resolve under {tone.lower()} tension.",
-            "image_prompt": f"Action dynamic angle, {char_desc} in the midst of a tense challenge in {setting}, sparks and energy swirling, {art_style} graphic novel style, high contrast, dramatic shadows, intense energy."
-        },
-        {
-            "panel": 4,
-            "title": "The Climax: Turning the Tide",
-            "scene_description": f"{character_name} gathers courage and executes a clever or heroic maneuver, turning the situation around with bold determination.",
-            "image_prompt": f"Low angle heroic pose of {char_desc} unleashing an extraordinary move in {setting}, radiant aura, {art_style} comic panel artwork, dynamic speed lines, bold linework, spectacular visual effects."
-        },
-        {
-            "panel": 5,
-            "title": "A New Dawn",
-            "scene_description": f"The aftermath in {setting}. {character_name} stands victorious and at peace, gazing toward new horizons with a satisfied smile. Tone: {tone}.",
-            "image_prompt": f"Golden hour warm lighting, wide scenic view of {setting}, {char_desc} smiling with a peaceful, confident posture, {art_style} comic style, gorgeous colorful background, tranquil celebratory atmosphere."
-        }
+    story_templates = [
+        ("The Beginning", f"Establishing shot of {setting}. {character_name} stands at the threshold, taking in the surroundings under {tone.lower()} skies."),
+        ("The Discovery", f"{character_name} uncovers an intriguing artifact or anomaly related to '{story_prompt[:50]}...' in {setting}."),
+        ("Rising Tension", f"A sudden complication emerges in {setting}, testing {character_name}'s quick reflexes and courage."),
+        ("The Confrontation", f"The conflict peaks as {character_name} directly faces the central dilemma under intense pressure."),
+        ("Turning the Tide", f"{character_name} executes a bold maneuver, unleashing clever tactics to gain the upper hand."),
+        ("The Climax", f"A decisive explosion of action and power sweeps across {setting}."),
+        ("Resolution", f"The dust clears over {setting}. {character_name} surveys the restored balance with quiet triumph."),
+        ("A New Horizon", f"{character_name} prepares for whatever legendary challenge awaits next beyond {setting}.")
     ]
+
+    panels = []
+    for i in range(1, panel_count + 1):
+        idx = min(i - 1, len(story_templates) - 1)
+        # If last panel, use final resolution template
+        if i == panel_count and panel_count > 1:
+            idx = min(6, len(story_templates) - 1)
+        t_title, t_desc = story_templates[idx]
+
+        # Use custom notes if user provided them
+        if custom_panel_notes and f"panel {i}" in custom_panel_notes.lower():
+            t_desc = f"Custom Scene: {custom_panel_notes}"
+
+        panels.append({
+            "panel": i,
+            "title": f"{t_title}",
+            "scene_description": f"{character_name} in {setting}. {t_desc}",
+            "image_prompt": f"A dynamic {art_style} comic illustration of {char_desc} in {setting}, {t_title.lower()} scene, highly detailed, dramatic lighting, masterpiece."
+        })
+
+    return panels
 
 
 def generate_outline(
@@ -81,57 +82,64 @@ def generate_outline(
     character_name: str,
     setting: str,
     tone: str,
-    art_style: str
+    art_style: str,
+    panel_count: int = 5,
+    custom_panel_notes: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Accept user's story prompt and character information, and generate
-    a structured 5-panel comic outline.
+    a structured comic outline with custom panel count and optional panel beats.
     
     Every panel dictionary contains:
-    - 'panel': Panel number (1 to 5)
+    - 'panel': Panel number (1 to panel_count)
     - 'title': Panel title
     - 'scene_description': Description of the scene
     - 'image_prompt': Detailed visual prompt for image generation
     """
+    panel_count = max(1, min(10, int(panel_count)))
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
 
     if not api_key or api_key == "your_gemini_api_key":
         logger.warning("GEMINI_API_KEY not configured. Falling back to development outline.")
-        return _generate_dev_fallback_outline(story_prompt, character_name, setting, tone, art_style)
+        return _generate_dev_fallback_outline(story_prompt, character_name, setting, tone, art_style, panel_count, custom_panel_notes)
 
     try:
         import google.generativeai as genai
 
         genai.configure(api_key=api_key)
 
+        custom_instructions = ""
+        if custom_panel_notes and custom_panel_notes.strip():
+            custom_instructions = f"\nCUSTOM PANEL SETUP / SCENE BEATS REQUESTED BY USER:\n{custom_panel_notes.strip()}\nFollow these user beats closely for the corresponding panels."
+
         prompt_system = f"""
 You are an expert comic book scriptwriter and visual director.
-Your task is to create a structured 5-panel comic book outline based on the user's concept.
+Your task is to create a structured {panel_count}-panel comic book outline based on the user's concept.
 
 Story Concept: "{story_prompt}"
 Main Character: {character_name}
 Setting: {setting}
 Story Tone: {tone}
 Art Style: {art_style}
+Total Panels: {panel_count}
+{custom_instructions}
 
 CRITICAL RULES:
-1. Generate EXACTLY 5 chronological panels (Panel 1 to Panel 5).
+1. Generate EXACTLY {panel_count} chronological panels (Panel 1 to Panel {panel_count}).
 2. Maintain strong narrative continuity:
-   - Panel 1: The Hook & Introduction in {setting}
-   - Panel 2: The Inciting Incident / Discovery
-   - Panel 3: Rising Tension / The Challenge
-   - Panel 4: The Climax / Critical Action
-   - Panel 5: Resolution / Satisfying Ending
+   - Panel 1: The Hook / Establishing Scene
+   - Middle Panels: Pacing, Discovery, Challenge, and Climax
+   - Final Panel {panel_count}: Resolution / Punchline / Satisfying Ending
 3. Character Visual Consistency:
-   - Establish consistent visual details for {character_name} (hair color, clothing, distinct traits) and repeat them across all image prompts.
+   - Establish consistent visual details for {character_name} (hair, clothing, distinct traits) and repeat them across all image prompts.
 4. Each panel MUST contain:
-   - panel: integer (1 to 5)
-   - title: short punchy comic title (e.g. "The Whispering Shadows")
+   - panel: integer (1 to {panel_count})
+   - title: short punchy comic title
    - scene_description: 2-3 sentences describing the narrative action and emotional mood
-   - image_prompt: a rich, self-contained visual illustration prompt designed for Stable Diffusion image generator. Include character appearance, pose, camera angle, setting details, lighting, mood, and art style '{art_style}'. Avoid text/speech inside the image prompt.
+   - image_prompt: a rich, self-contained visual illustration prompt designed for image generation. Include character appearance, pose, camera angle, setting details, lighting, mood, and art style '{art_style}'. Avoid text/speech inside the image prompt.
 
 OUTPUT FORMAT:
-Return ONLY a valid JSON list of 5 panel objects. Do not include extra conversational text.
+Return ONLY a valid JSON list of {panel_count} panel objects. Do not include extra markdown outside of JSON.
 Example:
 [
   {{
@@ -144,7 +152,15 @@ Example:
 """
 
         # Try flash models first, fallback to standard
-        model_names = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-pro"]
+        model_names = [
+            "gemini-flash-latest",
+            "gemini-flash-lite-latest",
+            "gemini-2.5-flash",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-pro-latest",
+            "gemini-pro"
+        ]
         response_text = None
         last_error = None
 
@@ -178,7 +194,7 @@ Example:
 
         # Ensure all panels have required keys
         formatted_panels = []
-        for i, item in enumerate(data[:5], start=1):
+        for i, item in enumerate(data[:panel_count], start=1):
             formatted_panels.append({
                 "panel": int(item.get("panel", i)),
                 "title": str(item.get("title", f"Panel {i}")),
@@ -186,8 +202,8 @@ Example:
                 "image_prompt": str(item.get("image_prompt", f"{character_name} in {setting}, {art_style} style"))
             })
 
-        # If less than 5 panels returned, pad up to 5
-        while len(formatted_panels) < 5:
+        # If less than requested panels returned, pad up to panel_count
+        while len(formatted_panels) < panel_count:
             p_num = len(formatted_panels) + 1
             formatted_panels.append({
                 "panel": p_num,
@@ -200,4 +216,4 @@ Example:
 
     except Exception as exc:
         logger.error(f"Error in generate_outline: {exc}. Utilizing robust fallback.", exc_info=True)
-        return _generate_dev_fallback_outline(story_prompt, character_name, setting, tone, art_style)
+        return _generate_dev_fallback_outline(story_prompt, character_name, setting, tone, art_style, panel_count, custom_panel_notes)

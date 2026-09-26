@@ -142,7 +142,15 @@ Example:
 ]
 """
 
-        model_names = ["gemini-1.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"]
+        model_names = [
+            "gemini-flash-latest",
+            "gemini-flash-lite-latest",
+            "gemini-2.5-flash",
+            "gemini-pro-latest",
+            "gemini-1.5-pro",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash"
+        ]
         response_text = None
         last_error = None
 
@@ -174,9 +182,8 @@ Example:
             raise ValueError("Gemini Pro response is not a valid list.")
 
         expanded_panels = []
-        for i, item in enumerate(data[:5]):
-            # Fallback to outline values if missing in Gemini Pro response
-            base_outline = outline[i] if i < len(outline) else {}
+        for i, base_outline in enumerate(outline):
+            item = data[i] if (i < len(data) and isinstance(data[i], dict)) else {}
             expanded_panels.append({
                 "panel": int(item.get("panel", base_outline.get("panel", i + 1))),
                 "title": str(item.get("title", base_outline.get("title", f"Panel {i + 1}"))),
