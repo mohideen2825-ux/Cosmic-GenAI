@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ComicCraft – AI Comic Story Creator Using Gemini Models</title>
+  <meta name="description" content="Turn your creative ideas into full 5-panel comic stories with narration, dialogues, comic illustrations, and downloadable PDF books using Gemini and Stable Diffusion.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💥</text></svg>">
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="navbar">
+    <a href="/" class="brand-container">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text">
+        <h1>ComicCraft</h1>
+        <div class="tagline">AI Comic Story Creator</div>
+      </div>
+    </a>
+    <div class="nav-actions">
+      {% if has_gemini %}
+        <span class="badge-status active" title="Google Gemini API Key Configured">
+          <span style="font-size: 0.9rem;">●</span> Gemini Live
+        </span>
+      {% else %}
+        <span class="badge-status dev" title="Running in Development Mode. Set GEMINI_API_KEY in .env for live Gemini generation.">
+          <span style="font-size: 0.9rem;">●</span> Dev / Demo Mode
+        </span>
+      {% endif %}
+      <a href="/docs" target="_blank" class="btn-secondary" style="font-size: 0.85rem; padding: 6px 14px;">API Docs</a>
+    </div>
+  </header>
+
+  <main class="container">
+    {% if error_message %}
+      <div class="alert-error" role="alert">
+        <span style="font-size: 1.5rem;">⚠️</span>
+        <div>{{ error_message }}</div>
+      </div>
+    {% endif %}
+
+    <!-- Hero Showcase Section -->
+    <section class="hero-section">
+      <div class="hero-pill">Powered by Gemini Flash, Gemini Pro & Stable Diffusion</div>
+      <h2 class="hero-title">Forge Your Own <span>Graphic Novel</span> in Seconds</h2>
+      <p class="hero-desc">
+        Transform your imagination into a structured 5-panel comic book with rich narration, authentic character dialogue, vivid AI illustrations, and export-ready PDF.
+      </p>
+
+      <!-- Quick Inspiration Bar -->
+      <div class="inspiration-bar">
+        <div class="inspiration-label">
+          <span>✨</span> Need inspiration? Click any scenario to auto-fill:
+        </div>
+        <div class="chips-wrapper">
+          {% for idea in inspiration_prompts %}
+            <button 
+              type="button" 
+              class="chip-btn"
+              data-prompt="{{ idea.prompt }}"
+              data-character="{{ idea.character }}"
+              data-setting="{{ idea.setting }}"
+              data-tone="{{ idea.tone }}"
+              data-style="{{ idea.art_style }}">
+              <strong>{{ idea.character }}</strong> ({{ idea.setting }} &bull; {{ idea.tone }})
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Creation Form -->
+    <section class="studio-card">
+      <form id="comicForm" action="/generate" method="POST">
+        <div class="form-grid">
+          
+          <!-- Story Prompt -->
+          <div class="form-group col-full">
+            <label for="storyPrompt" class="form-label">
+              <span>📖 Story Idea &amp; Premise</span> <span class="req">*</span>
+            </label>
+            <textarea 
+              id="storyPrompt" 
+              name="story_prompt" 
+              class="textarea-field" 
+              placeholder="Tell us your comic story idea... (e.g. A young inventor unearths a pocket-sized teleportation device in their grandfather's workshop and inadvertently opens a portal to a floating sky island.)" 
+              required></textarea>
+            <span class="form-hint">Describe what happens, the key mystery, or the primary mission.</span>
+          </div>
+
+          <!-- Character Name -->
+          <div class="form-group">
+            <label for="characterName" class="form-label">
+              <span>👤 Main Character Name</span> <span class="req">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="characterName" 
+              name="character_name" 
+              class="input-field" 
+              placeholder="e.g. Arjun, Maya, Captain Vance" 
+              required>
+            <span class="form-hint">The central hero whose journey and dialogue will drive the panels.</span>
+          </div>
+
+          <!-- Setting Selection -->
+          <div class="form-group">
+            <label for="settingSelect" class="form-label">
+              <span>🌍 Setting &amp; Environment</span> <span class="req">*</span>
+            </label>
+            <select id="settingSelect" name="setting" class="select-field" required>
+              <option value="Forest">Forest</option>
+              <option value="School">School</option>
+              <option value="City" selected>City</option>
+              <option value="Space">Space</option>
+              <option value="Village">Village</option>
+              <option value="Fantasy World">Fantasy World</option>
+              <option value="Custom">Custom Setting...</option>
+            </select>
+            <span class="form-hint">Choose a classic comic backdrop or type a custom realm below.</span>
+          </div>
+
+          <!-- Custom Setting Input (Hidden unless Custom is selected) -->
+          <div class="form-group col-full" id="customSettingContainer" style="display: none;">
+            <label for="customSettingInput" class="form-label">
+              <span>🏛️ Specify Custom Setting</span>
+            </label>
+            <input 
+              type="text" 
+              id="customSettingInput" 
+              name="custom_setting" 
+              class="input-field" 
+              placeholder="e.g. Cyberpunk Underwater Trench, Ancient Floating Citadel">
+          </div>
+
+          <!-- Story Tone -->
+          <div class="form-group col-full">
+            <label class="form-label">
+              <span>🎭 Story Tone</span>
+            </label>
+            <div class="options-grid">
+              {% set tones = [
+                ('Action', '💥'),
+                ('Adventure', '🧭'),
+                ('Funny', '😂'),
+                ('Dramatic', '⚡'),
+                ('Emotional', '❤️'),
+                ('Mystery', '🔍'),
+                ('Fantasy', '🔮')
+              ] %}
+              {% for t_name, t_icon in tones %}
+                <label>
+                  <input type="radio" name="tone" value="{{ t_name }}" class="option-radio" {% if t_name == 'Action' %}checked{% endif %}>
+                  <div class="option-card">
+                    <span class="icon">{{ t_icon }}</span>
+                    <span class="name">{{ t_name }}</span>
+                  </div>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Art Style -->
+          <div class="form-group col-full">
+            <label class="form-label">
+              <span>🎨 Preferred Art Style</span>
+            </label>
+            <div class="options-grid">
+              {% set styles = [
+                ('Comic Book', '🦸'),
+                ('Anime', '🌸'),
+                ('Cartoon', '📺'),
+                ('Manga', '✒️'),
+                ('Fantasy', '🧙'),
+                ('Realistic', '📸')
+              ] %}
+              {% for s_name, s_icon in styles %}
+                <label>
+                  <input type="radio" name="art_style" value="{{ s_name }}" class="option-radio" {% if s_name == 'Comic Book' %}checked{% endif %}>
+                  <div class="option-card">
+                    <span class="icon">{{ s_icon }}</span>
+                    <span class="name">{{ s_name }}</span>
+                  </div>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Submit Button -->
+        <div class="submit-container">
+          <button type="submit" id="generateBtn" class="btn-generate">
+            <span>GENERATE COMIC</span> 🚀
+          </button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <!-- Fullscreen Multi-Phase Loading Modal -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-box">
+      <div class="loading-spinner-burst">💥</div>
+      <h3 class="loading-title">Creating Your Comic</h3>
+      <p id="loadingPhaseText" class="loading-phase-text">Summoning Gemini Flash for 5-panel outline...</p>
+      
+      <div class="progress-track">
+        <div id="progressBarFill" class="progress-bar-fill"></div>
+      </div>
+      
+      <p style="font-size: 0.85rem; color: #9ca3af;">
+        Generating outline &bull; Crafting narration &bull; Rendering illustrations &bull; Assembling PDF
+      </p>
+    </div>
+  </div>
+
+  <script src="/static/js/script.js"></script>
+</body>
+</html>

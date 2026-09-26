@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Export Success – ComicCraft AI</title>
+  <meta name="description" content="Your ComicCraft comic story has been successfully generated and compiled into a high-resolution PDF.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💥</text></svg>">
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="brand-container">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text">
+        <h1>ComicCraft</h1>
+        <div class="tagline">Export Center</div>
+      </div>
+    </a>
+  </header>
+
+  <main class="container">
+    <div class="success-card">
+      <div class="success-badge-icon">✓</div>
+      <h2 class="success-title">Your Comic Is Ready!</h2>
+      <p style="font-size: 1.25rem; color: #d1d5db; margin-bottom: 2rem;">
+        Congratulations! <strong>"{{ comic_title }}"</strong> featuring <strong>{{ character_name }}</strong> has been fully rendered and bound into a publication-ready PDF.
+      </p>
+
+      <div style="background: #111422; border: 2px dashed #3b4261; border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 2.5rem;">
+        <p style="color: var(--comic-yellow); font-family: var(--font-comic); font-size: 1.2rem; margin-bottom: 6px;">
+          📄 Comic Book Issue Ready
+        </p>
+        <p style="color: #9ca3af; font-size: 0.95rem;">
+          Your 5-panel comic is prepared with front cover art, panel illustrations, character dialogue speech bubbles, and narrative captions.
+        </p>
+      </div>
+
+      <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+        {% if pdf_url %}
+          <a href="{{ pdf_url }}" download class="btn-primary" style="font-size: 1.35rem; padding: 14px 32px;">
+            <span>📥 Download PDF</span>
+          </a>
+          <a href="{{ pdf_url }}" target="_blank" class="btn-secondary" style="font-size: 1.35rem; padding: 14px 28px;">
+            <span>👁️ Open PDF in New Tab</span>
+          </a>
+        {% endif %}
+        <a href="/" class="btn-success" style="font-size: 1.35rem; padding: 14px 32px;">
+          <span>✨ Create Another Comic</span>
+        </a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

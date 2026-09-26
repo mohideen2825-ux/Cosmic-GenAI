@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ comic_title }} – ComicCraft AI Comic Reader</title>
+  <meta name="description" content="Read your custom AI generated 5-panel comic story and export it to PDF.">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💥</text></svg>">
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="navbar">
+    <a href="/" class="brand-container">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text">
+        <h1>ComicCraft</h1>
+        <div class="tagline">Comic Reader &bull; Preview Mode</div>
+      </div>
+    </a>
+    <div class="nav-actions">
+      <a href="{{ pdf_url }}" download class="btn-primary" style="font-size: 0.95rem; padding: 8px 18px;">
+        <span>📥 Download PDF</span>
+      </a>
+      <a href="/" class="btn-secondary" style="font-size: 0.95rem; padding: 8px 18px;">
+        <span>✨ Create Another Comic</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Top Action & Meta Showcase Bar -->
+    <section class="preview-header-bar">
+      <div class="preview-title-group">
+        <h2>{{ comic_title }}</h2>
+        <div class="meta-tags">
+          <span class="meta-tag"><strong>Hero:</strong> {{ character_name }}</span>
+          <span class="meta-tag"><strong>Setting:</strong> {{ setting }}</span>
+          <span class="meta-tag"><strong>Tone:</strong> {{ tone }}</span>
+          <span class="meta-tag"><strong>Style:</strong> {{ art_style }}</span>
+          {% if is_dev_mode %}
+            <span class="meta-tag" style="background: #b45309; color: #fff;"><strong>Mode:</strong> Dev / Demo</span>
+          {% else %}
+            <span class="meta-tag" style="background: #047857; color: #fff;"><strong>Mode:</strong> Gemini Live</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="preview-actions">
+        <a href="{{ pdf_url }}" target="_blank" class="btn-primary">
+          <span>📖 Download Comic PDF</span>
+        </a>
+        <a href="/export-success?pdf={{ pdf_url }}&title={{ comic_title | urlencode }}&character={{ character_name | urlencode }}" class="btn-success">
+          <span>🎉 View Export Page</span>
+        </a>
+        <a href="/" class="btn-secondary">
+          <span>⚡ Create Another Comic</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Comic Panels Stream (5-Panel Structured Display) -->
+    <section class="comic-stream">
+      {% for panel in layout %}
+        <article class="comic-panel-card" id="panel-{{ panel.panel }}">
+          
+          <!-- Left Column: Visual Artwork -->
+          <div class="panel-visual-col">
+            <div class="panel-overlay-badge">PANEL #{{ panel.panel }}</div>
+            <img src="{{ panel.image }}" alt="Illustration for Panel {{ panel.panel }}: {{ panel.title }}" loading="lazy">
+          </div>
+
+          <!-- Right Column: Comic Story, Dialogue, & Narration -->
+          <div class="panel-story-col">
+            <h3 class="panel-header-title">{{ panel.title }}</h3>
+
+            <!-- Comic Narration Box (Top Yellow Caption Box) -->
+            {% if panel.narration %}
+              <div class="comic-narration-box">
+                <span class="box-label">🎙️ NARRATOR</span>
+                <p class="narration-content">{{ panel.narration }}</p>
+              </div>
+            {% endif %}
+
+            <!-- Character Dialogue (Speech Bubble) -->
+            {% if panel.dialogue %}
+              <div class="comic-dialogue-box">
+                <div class="dialogue-speaker">💬 {{ character_name }} Speaks</div>
+                <p class="dialogue-content">{{ panel.dialogue }}</p>
+              </div>
+            {% endif %}
+
+            <!-- Director's Scene Description -->
+            {% if panel.scene_description %}
+              <div class="scene-direction-note">
+                <strong>Scene Direction:</strong> {{ panel.scene_description }}
+              </div>
+            {% endif %}
+          </div>
+
+        </article>
+      {% endfor %}
+    </section>
+
+    <!-- Bottom Actions Bar -->
+    <div style="margin-top: 3.5rem; text-align: center; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+      <a href="{{ pdf_url }}" download class="btn-primary" style="font-size: 1.5rem; padding: 14px 36px;">
+        <span>📥 Download Full Comic PDF</span>
+      </a>
+      <a href="/" class="btn-secondary" style="font-size: 1.5rem; padding: 14px 36px;">
+        <span>🔄 Create Another Comic</span>
+      </a>
+    </div>
+  </main>
+
+  <footer style="text-align: center; padding: 3rem 1.5rem; color: #6b7280; font-size: 0.9rem; border-top: 2px solid #1f253d; margin-top: 4rem;">
+    <p>ComicCraft – Powered by Google Gemini Flash &amp; Pro, and Stable Diffusion AI Models.</p>
+  </footer>
+</body>
+</html>
