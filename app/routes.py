@@ -43,7 +43,7 @@ def _is_api_key_configured() -> bool:
     return bool(key and key != "your_gemini_api_key")
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def index_page(request: Request):
     """
     Renders the ComicCraft homepage with the creation form and inspiration ideas.
@@ -76,8 +76,9 @@ async def index_page(request: Request):
     ]
 
     return templates.TemplateResponse(
-        "index.html",
-        {
+        request=request,
+        name="index.html",
+        context={
             "request": request,
             "has_gemini": has_gemini,
             "hf_configured": hf_configured,
@@ -180,8 +181,9 @@ async def generate_comic_form(
         is_dev_mode = not _is_api_key_configured()
 
         return templates.TemplateResponse(
-            "comic_preview.html",
-            {
+            request=request,
+            name="comic_preview.html",
+            context={
                 "request": request,
                 "layout": layout,
                 "comic_title": comic_title,
@@ -198,8 +200,9 @@ async def generate_comic_form(
     except Exception as exc:
         logger.error(f"Error generating comic: {exc}", exc_info=True)
         return templates.TemplateResponse(
-            "index.html",
-            {
+            request=request,
+            name="index.html",
+            context={
                 "request": request,
                 "error_message": f"Something went wrong while generating your comic: {str(exc)}. Please try again.",
                 "has_gemini": _is_api_key_configured(),
@@ -292,8 +295,9 @@ async def export_success(
     Displays confirmation, download link, and 'Create Another Comic' button.
     """
     return templates.TemplateResponse(
-        "export_success.html",
-        {
+        request=request,
+        name="export_success.html",
+        context={
             "request": request,
             "pdf_url": pdf,
             "comic_title": title,
