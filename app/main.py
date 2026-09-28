@@ -47,6 +47,11 @@ from app.routes import router as comic_router
 app.include_router(comic_router)
 
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "comiccraft", "version": "1.0.1"}
+
+
 @app.on_event("startup")
 async def startup_event():
     gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
